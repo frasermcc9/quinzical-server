@@ -5,14 +5,15 @@ import LogImpl, { Log } from "../helpers/Log";
 import { Game, GameImpl } from "../model/Game";
 import { GameRegister, GameRegisterImpl } from "../model/GameRegister";
 import { Player, PlayerConstructor, PlayerFactory, PlayerImpl } from "../model/Player";
+import { QuestionBank, QuestionBankImpl } from "../model/Questions/QuestionBank";
 import { SocketManager, SocketManagerImpl } from "../server/Socket";
 import { IdGenerationContext, IdGeneratorContextImpl } from "../util/strategies/IdGenerator";
 import { FACTORIES, TYPES } from "./types";
 
 const mainContainer = new Container();
 mainContainer.bind<SocketManager>(TYPES.SocketManager).to(SocketManagerImpl).inSingletonScope();
-
 mainContainer.bind<GameRegister>(TYPES.GameRegister).to(GameRegisterImpl).inSingletonScope();
+mainContainer.bind<QuestionBank>(TYPES.QuestionBank).to(QuestionBankImpl).inSingletonScope();
 
 mainContainer.bind<IdGenerationContext>(TYPES.IDGeneratorContext).to(IdGeneratorContextImpl);
 
