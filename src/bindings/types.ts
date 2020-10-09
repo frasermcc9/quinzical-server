@@ -6,6 +6,8 @@ export const TYPES = {
     GameRegister: Symbol.for("GameRegister"),
 
     IDGeneratorContext: Symbol.for("IdGenerationContext"),
+
+    QuestionBank:Symbol.for("QuestionBank")
 };
 
 export const FACTORIES = {
