@@ -67,7 +67,7 @@ let SocketManagerImpl = SocketManagerImpl_1 = class SocketManagerImpl {
                 if (!result) {
                     client.emit("joinGameNotification", false, "Someone already has that name.");
                 }
-                client.emit("joinGameNotification", true);
+                client.emit("joinGameNotification", true, game.getPlayerNames());
                 log.trace("SocketManagerImpl", `${name} joined game joined with code ${id}.`);
             });
             client.on("browseGames", () => {

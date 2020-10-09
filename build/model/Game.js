@@ -60,7 +60,7 @@ let GameImpl = GameImpl_1 = class GameImpl {
             return false;
         const playerObj = this.playerFactory(name, player);
         this.players.push(playerObj);
-        this.host?.getSocket().emit("playerJoin", name);
+        this.players.forEach((p) => p.getSocket().emit("playerJoin", name));
         return true;
     }
     addHostPlayer(name, player) {
@@ -82,6 +82,9 @@ let GameImpl = GameImpl_1 = class GameImpl {
     }
     isFull() {
         return this.players.length == this.maxPlayers;
+    }
+    getPlayerNames() {
+        return this.players.map((p) => p.Name);
     }
     get Code() {
         return this.code;

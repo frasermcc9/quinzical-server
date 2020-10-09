@@ -27,6 +27,7 @@ declare class GameImpl implements Game {
     setGameSettings(settings: GameSettings): void;
     isPublic(): boolean;
     isFull(): boolean;
+    getPlayerNames(): string[];
     get Code(): string;
     set Code(value: string);
     get CurrentPlayers(): number;
@@ -44,6 +45,7 @@ interface Game {
     isFull(): boolean;
     getHostName(): string;
     getGameInfo(): GameData;
+    getPlayerNames(): string[];
     CurrentPlayers: number;
     Code: string;
     MaxPlayers: number;
