@@ -6,7 +6,7 @@ import { Socket } from "socket.io";
 @injectable()
 class GameImpl implements Game {
     private players: Player[] = [];
-    private code: string;
+    private code: string = "AAAA";
 
     private questionsCompleted: number;
 
