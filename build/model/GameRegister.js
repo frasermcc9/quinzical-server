@@ -22,6 +22,9 @@ let GameRegisterImpl = class GameRegisterImpl {
         this.gameFactory = gameFactory;
         this.gameMap = new Map();
     }
+    getPublicGames() {
+        return Array.from(this.gameMap.values()).filter((f) => f.isPublic() && !f.isFull());
+    }
     generateGame() {
         let id = this.idGenerator.generateIdStrategy("RANDOM").generateId();
         while (this.gameMap.has(id)) {

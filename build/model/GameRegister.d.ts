@@ -8,12 +8,14 @@ declare class GameRegisterImpl implements GameRegister {
     static alphabet: string;
     private gameMap;
     constructor(log: Log, idGenerator: IdGenerationContext, gameFactory: (type: string) => Game);
+    getPublicGames(): Game[];
     generateGame(): Game;
     findGame(gameId: string): Game | undefined;
 }
 interface GameRegister {
     generateGame(): Game;
     findGame(gameId: string): Game | undefined;
+    getPublicGames(): Game[];
 }
 export { GameRegister, GameRegisterImpl };
 //# sourceMappingURL=GameRegister.d.ts.map

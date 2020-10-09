@@ -49,16 +49,31 @@ let SocketManagerImpl = SocketManagerImpl_1 = class SocketManagerImpl {
             client.on("hostGameRequest", (name = "", gameSettings = {}) => {
                 const game = gameRegister.generateGame();
                 game.setGameSettings(gameSettings);
-                game.addPlayer(name, client);
+                game.addHostPlayer(name, client);
                 client.emit("gameHostGiven", game.Code);
-                log.trace("SocketManagerImpl", `New Game Initiated by ${name}.`);
+                log.trace("SocketManagerImpl", `New Game Initiated by ${name} with code ${game.Code}`);
             });
             client.on("joinGameRequest", (name, id) => {
                 const game = gameRegister.findGame(id);
-                if (!game)
+                if (game === undefined) {
+                    client.emit("joinGameNotification", false, "Game was not found.");
                     return log.trace("SocketManagerImpl", `${name} tried to join game with code ${id}.`);
-                game.addPlayer(name, client);
+                }
+                if (game.isFull()) {
+                    client.emit("joinGameNotification", false, "Game is full.");
+                    return log.trace("SocketManagerImpl", `${name} tried to join game with code ${id}.`);
+                }
+                const result = game.addPlayer(name, client);
+                if (!result) {
+                    client.emit("joinGameNotification", false, "Someone already has that name.");
+                }
+                client.emit("joinGameNotification", true);
                 log.trace("SocketManagerImpl", `${name} joined game joined with code ${id}.`);
+            });
+            client.on("browseGames", () => {
+                const games = gameRegister.getPublicGames();
+                const transmitData = games.map((g) => g.getGameInfo());
+                client.emit("browseGameDataLoaded", transmitData);
             });
         });
     }

@@ -3,6 +3,7 @@ export declare const TYPES: {
     Log: symbol;
     GameRegister: symbol;
     IDGeneratorContext: symbol;
+    QuestionBank: symbol;
 };
 export declare const FACTORIES: {
     GameFactory: symbol;

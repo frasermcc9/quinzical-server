@@ -6,8 +6,14 @@ class PlayerImpl {
         this.name = name;
         this.client = client;
     }
+    get Name() {
+        return this.name;
+    }
     sendQuestion(question) {
         this.client.emit("newQuestion", question);
+    }
+    getSocket() {
+        return this.client;
     }
 }
 exports.PlayerImpl = PlayerImpl;
