@@ -1,10 +1,10 @@
 class QuestionImpl implements Question {
-    private solution: string;
+    private solution: string[];
     private question: string;
     private prompt: string;
 
-    private constructor($solution: string, $question: string, $prompt: string) {
-        this.solution = $solution;
+    private constructor($solutions: string[], $question: string, $prompt: string) {
+        this.solution = $solutions;
         this.question = $question;
         this.prompt = $prompt;
     }
@@ -28,13 +28,13 @@ class QuestionImpl implements Question {
         return this.prompt;
     }
 
-    static create({ prompt, question, solution }: QuestionData): Question {
-        return new QuestionImpl(solution, question, prompt);
+    static create({ prompt, question, solutions }: QuestionData): Question {
+        return new QuestionImpl(solutions, question, prompt);
     }
 }
 
 interface Question {
-    Solution: string;
+    Solution: string[];
     Question: string;
     Prompt: string;
 
@@ -42,7 +42,7 @@ interface Question {
 }
 
 interface QuestionData extends SendableQuestionData {
-    solution: string;
+    solutions: string[];
 }
 
 interface SendableQuestionData {
