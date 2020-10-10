@@ -14,6 +14,10 @@ class PlayerImpl implements Player {
         this.client.emit("roundOver", solution);
     }
 
+    signalPlayerCountChange(players: string[]): void {
+        this.client.emit("playerJoin", players);
+    }
+
     get Name(): string {
         return this.name;
     }
@@ -55,6 +59,8 @@ interface Player {
     signalRoundOver(solution: string): void;
 
     signalGameOver(winners: { name: string; points: number }[]): void;
+
+    signalPlayerCountChange(players: string[]): void
 
     Name: string;
 
