@@ -25,7 +25,7 @@ class ActiveQuestionManagerImpl implements ActiveQuestionManager {
         this.question = question;
         this.playerMap.forEach((_v, k) => {
             this.playerMap.set(k, false);
-            k.sendQuestion(question.getSendableData());
+            k.signalNewQuestion(question.getSendableData());
         });
     }
 
