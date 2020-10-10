@@ -6,9 +6,10 @@ import { TYPES } from "../bindings/types";
 import { QuestionBank } from "./Questions/QuestionBank";
 import { ActiveQuestionManager } from "./ActiveQuestionManager";
 import { Timer } from "../helpers/Timer";
+import { EventEmitter } from "events";
 
 @injectable()
-class GameImpl implements Game {
+class GameImpl extends EventEmitter implements Game {
     //#region FIELDS
 
     private players: Player[] = [];
@@ -33,6 +34,7 @@ class GameImpl implements Game {
         @inject(TYPES.ActiveQuestionManager) private readonly questionManager: ActiveQuestionManager,
         @inject(TYPES.Timer) private readonly timer: Timer
     ) {
+        super();
         this.questions = GameImpl.default_questions;
         this.questionsCompleted = GameImpl.initial_questions_answered;
         this.timeToAnswer = GameImpl.default_time_to_answer;
@@ -191,6 +193,7 @@ class GameImpl implements Game {
             .slice(0, 5)
             .map((p) => ({ name: p.Name, points: p.Points }));
         this.players.forEach((p) => p.signalGameOver(topFive));
+        this.emit("gameEnd")
     }
 }
 
@@ -214,6 +217,8 @@ interface Game {
     getGameInfo(): GameData;
 
     getPlayerNames(): string[];
+
+    on(event: "gameEnd", listener: () => void): void;
 
     CurrentPlayers: number;
 

@@ -33,6 +33,9 @@ class GameRegisterImpl implements GameRegister {
         game.Code = id;
         this.gameMap.set(id, game);
 
+        //delete the game when its finished
+        game.on("gameEnd", () => this.gameMap.delete(id));
+
         return game;
     }
 
