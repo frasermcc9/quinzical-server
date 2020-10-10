@@ -6,6 +6,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.IoCContainer = void 0;
 const inversify_1 = require("inversify");
 const Log_1 = __importDefault(require("../helpers/Log"));
+const Timer_1 = require("../helpers/Timer");
+const ActiveQuestionManager_1 = require("../model/ActiveQuestionManager");
 const Game_1 = require("../model/Game");
 const GameRegister_1 = require("../model/GameRegister");
 const Player_1 = require("../model/Player");
@@ -19,7 +21,9 @@ mainContainer.bind(types_1.TYPES.SocketManager).to(Socket_1.SocketManagerImpl).i
 mainContainer.bind(types_1.TYPES.GameRegister).to(GameRegister_1.GameRegisterImpl).inSingletonScope();
 mainContainer.bind(types_1.TYPES.QuestionBank).to(QuestionBank_1.QuestionBankImpl).inSingletonScope();
 mainContainer.bind(types_1.TYPES.IDGeneratorContext).to(IdGenerator_1.IdGeneratorContextImpl);
+mainContainer.bind(types_1.TYPES.ActiveQuestionManager).to(ActiveQuestionManager_1.ActiveQuestionManagerImpl);
 mainContainer.bind(types_1.TYPES.Log).to(Log_1.default);
+mainContainer.bind(types_1.TYPES.Timer).to(Timer_1.TimerImpl);
 mainContainer.bind("console").toConstantValue(console);
 mainContainer.bind("process").toConstantValue(process);
 mainContainer.bind(types_1.FACTORIES.GameFactory).toFactory((context) => {

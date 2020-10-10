@@ -6,7 +6,9 @@ exports.TYPES = {
     Log: Symbol.for("Log"),
     GameRegister: Symbol.for("GameRegister"),
     IDGeneratorContext: Symbol.for("IdGenerationContext"),
-    QuestionBank: Symbol.for("QuestionBank")
+    QuestionBank: Symbol.for("QuestionBank"),
+    ActiveQuestionManager: Symbol.for("ActiveQuestionManager"),
+    Timer: Symbol.for("Timer"),
 };
 exports.FACTORIES = {
     GameFactory: Symbol.for("GameFactory"),

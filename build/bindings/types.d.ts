@@ -4,6 +4,8 @@ export declare const TYPES: {
     GameRegister: symbol;
     IDGeneratorContext: symbol;
     QuestionBank: symbol;
+    ActiveQuestionManager: symbol;
+    Timer: symbol;
 };
 export declare const FACTORIES: {
     GameFactory: symbol;

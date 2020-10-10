@@ -1,10 +1,16 @@
+/// <reference types="node" />
 import { PlayerFactory } from "./Player";
 import { Question } from "./Questions/Question";
 import { Socket } from "socket.io";
 import { QuestionBank } from "./Questions/QuestionBank";
-declare class GameImpl implements Game {
+import { ActiveQuestionManager } from "./ActiveQuestionManager";
+import { Timer } from "../helpers/Timer";
+import { EventEmitter } from "events";
+declare class GameImpl extends EventEmitter implements Game {
     private readonly playerFactory;
     private readonly questionBank;
+    private readonly questionManager;
+    private readonly timer;
     private players;
     private code;
     private host?;
@@ -17,27 +23,39 @@ declare class GameImpl implements Game {
     private static initial_questions_answered;
     private static default_time_to_answer;
     private static default_max_players;
-    constructor(playerFactory: PlayerFactory, questionBank: QuestionBank);
-    getGameInfo(): GameData;
-    getHostName(): string;
+    constructor(playerFactory: PlayerFactory, questionBank: QuestionBank, questionManager: ActiveQuestionManager, timer: Timer);
     getNextQuestion(): Question;
-    emitQuestionToPlayers(): void;
-    addPlayer(name: string, player: Socket): boolean;
+    progressToNextRound(): void;
+    progressToRoundEnd(): void;
+    startGame(): void;
+    addPlayer(name: string, player: Socket, host?: boolean): boolean;
     addHostPlayer(name: string, player: Socket): boolean;
-    setGameSettings(settings: GameSettings): void;
     isPublic(): boolean;
     isFull(): boolean;
-    getPlayerNames(): string[];
+    getGameInfo(): GameData;
+    setGameSettings(settings: GameSettings): void;
     get Code(): string;
     set Code(value: string);
     get CurrentPlayers(): number;
     get MaxPlayers(): number;
     get QuestionCount(): number;
     get TimePerQuestion(): number;
+    getPlayerNames(): string[];
+    getHostName(): string;
+    /**
+     * returns the time ratio at the current point
+     */
+    private getTimeRatio;
+    private handleGameEnd;
+    /**
+     * Gets top players (up to 5), their names and score.
+     */
+    private getTopPlayers;
+    private removePlayer;
 }
 interface Game {
     getNextQuestion(): Question;
-    emitQuestionToPlayers(): void;
+    progressToNextRound(): void;
     addPlayer(name: string, player: Socket): boolean;
     addHostPlayer(name: string, player: Socket): boolean;
     setGameSettings(settings: GameSettings): void;
@@ -46,6 +64,7 @@ interface Game {
     getHostName(): string;
     getGameInfo(): GameData;
     getPlayerNames(): string[];
+    on(event: "gameEnd", listener: () => void): void;
     CurrentPlayers: number;
     Code: string;
     MaxPlayers: number;
