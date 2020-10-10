@@ -6,16 +6,24 @@ class PlayerImpl implements Player {
 
     constructor(private readonly name: string, private readonly client: Socket) {}
 
-    signalGameOver(winners: { name: string; points: number }[]): void {
+    signalGameOver(winners: PlayerSummary[]): void {
         this.client.emit("gameFinished", winners);
     }
 
-    signalRoundOver(solution: string): void {
-        this.client.emit("roundOver", solution);
+    signalRoundOver(solution: string, playerPoints: number, topPlayers: PlayerSummary[]): void {
+        this.client.emit("roundOver", solution, playerPoints, topPlayers);
     }
 
     signalPlayerCountChange(players: string[]): void {
-        this.client.emit("playerJoin", players);
+        this.client.emit("playersChange", players);
+    }
+
+    signalNewQuestion(question: SendableQuestionData): void {
+        this.client.emit("newQuestion", question);
+    }
+
+    signalGameStart(): void {
+        this.client.emit("gameStart");
     }
 
     get Name(): string {
@@ -26,16 +34,8 @@ class PlayerImpl implements Player {
         return this.points;
     }
 
-    sendQuestion(question: SendableQuestionData): void {
-        this.client.emit("newQuestion", question);
-    }
-
     getSocket() {
         return this.client;
-    }
-
-    signalGameStart(): void {
-        this.client.emit("gameStart");
     }
 
     increasePoints(pointsToAdd: number): void {
@@ -47,8 +47,8 @@ interface PlayerConstructor {
     new (name: string, client: Socket): PlayerImpl;
 }
 
-interface Player {
-    sendQuestion(question: SendableQuestionData): void;
+interface Player extends PlayerSummary {
+    signalNewQuestion(question: SendableQuestionData): void;
 
     getSocket(): Socket;
 
@@ -56,12 +56,14 @@ interface Player {
 
     increasePoints(pointsToAdd: number): void;
 
-    signalRoundOver(solution: string): void;
+    signalRoundOver(solution: string, playerPoints: number, topPlayers: PlayerSummary[]): void;
 
-    signalGameOver(winners: { name: string; points: number }[]): void;
+    signalGameOver(winners: PlayerSummary[]): void;
 
-    signalPlayerCountChange(players: string[]): void
+    signalPlayerCountChange(players: string[]): void;
+}
 
+interface PlayerSummary {
     Name: string;
 
     Points: number;
@@ -71,4 +73,4 @@ interface PlayerFactory extends Function {
     (name: string, client: Socket): Player;
 }
 
-export { PlayerConstructor, PlayerImpl, Player, PlayerFactory };
+export { PlayerConstructor, PlayerImpl, Player, PlayerFactory, PlayerSummary };
