@@ -4,9 +4,13 @@ import { Question } from "./Questions/Question";
 import { Socket } from "socket.io";
 import { TYPES } from "../bindings/types";
 import { QuestionBank } from "./Questions/QuestionBank";
+import { ActiveQuestionManager } from "./ActiveQuestionManager";
+import { Timer } from "../helpers/Timer";
 
 @injectable()
 class GameImpl implements Game {
+    //#region FIELDS
+
     private players: Player[] = [];
     private code: string = "AAAA";
     private host?: Player;
@@ -25,43 +29,64 @@ class GameImpl implements Game {
 
     constructor(
         @inject("PlayerFactory") private readonly playerFactory: PlayerFactory,
-        @inject(TYPES.QuestionBank) private readonly questionBank: QuestionBank
+        @inject(TYPES.QuestionBank) private readonly questionBank: QuestionBank,
+        @inject(TYPES.ActiveQuestionManager) private readonly questionManager: ActiveQuestionManager,
+        @inject(TYPES.Timer) private readonly timer: Timer
     ) {
         this.questions = GameImpl.default_questions;
         this.questionsCompleted = GameImpl.initial_questions_answered;
         this.timeToAnswer = GameImpl.default_time_to_answer;
         this.maxPlayers = GameImpl.default_max_players;
         this.isGamePublic = false;
+
+        this.timer.setDelay(this.timeToAnswer * 1000).setFunction(() => this.progressToRoundEnd());
     }
 
-    getGameInfo(): GameData {
-        return {
-            code: this.code,
-            currentPlayers: this.CurrentPlayers,
-            host: this.getHostName(),
-            maxPlayers: this.MaxPlayers,
-            questions: this.QuestionCount,
-            timePerQuestion: this.TimePerQuestion,
-        };
-    }
+    //#endregion
 
-    getHostName(): string {
-        const name: string | undefined = this.host?.Name;
-        if (name === undefined) {
-            throw new Error("Host does not have a name");
-        }
-        return name;
-    }
+    //#region IN GAME
 
     getNextQuestion(): Question {
         return this.questionBank.getQuestion();
     }
 
-    emitQuestionToPlayers(): void {
-        this.players.forEach((player) => {
-            player.sendQuestion(this.getNextQuestion().getSendableData());
-        });
+    progressToNextRound(): void {
+        if (this.questionsCompleted == this.questions) return this.handleGameEnd();
+        this.questionsCompleted++;
+
+        const nextQuestion: Question = this.getNextQuestion();
+        this.questionManager.setNewQuestion(nextQuestion);
+
+        this.timer.start();
     }
+
+    progressToRoundEnd(): void {
+        this.players.forEach((player) => player.signalRoundOver(this.questionManager.CorrectAnswer));
+        setTimeout(() => {
+            this.progressToNextRound();
+        }, 3000);
+    }
+
+    startGame(): void {
+        //'Close' the game to new players
+        this.maxPlayers = this.CurrentPlayers;
+        this.players.forEach((player) => {
+            player.signalGameStart();
+
+            player.getSocket().on("questionAnswered", (answer) => {
+                this.questionManager.answerQuestion(answer, player, this.getTimeRatio());
+                if (this.questionManager.isAllAnswered()) {
+                    this.timer.stop();
+                    this.progressToRoundEnd();
+                }
+            });
+        });
+        this.progressToNextRound();
+    }
+
+    //#endregion
+
+    //#region PRE-GAME
 
     addPlayer(name: string, player: Socket): boolean {
         if (this.players.length === this.maxPlayers) return false;
@@ -81,14 +106,8 @@ class GameImpl implements Game {
         const playerObj: Player = this.playerFactory(name, player);
         this.players.push(playerObj);
         this.host = playerObj;
+        this.host.getSocket().on("startGame", () => this.startGame());
         return true;
-    }
-
-    setGameSettings(settings: GameSettings) {
-        this.questions = settings.questions ?? GameImpl.default_questions;
-        this.timeToAnswer = settings.timePerQuestion ?? GameImpl.default_time_to_answer;
-        this.maxPlayers = settings.maxPlayers ?? GameImpl.default_max_players;
-        this.isGamePublic = settings.isGamePublic ?? false;
     }
 
     isPublic(): boolean {
@@ -99,8 +118,26 @@ class GameImpl implements Game {
         return this.players.length == this.maxPlayers;
     }
 
-    getPlayerNames(): string[] {
-        return this.players.map((p) => p.Name);
+    //#endregion
+
+    //#region GAME SETTINGS
+
+    getGameInfo(): GameData {
+        return {
+            code: this.code,
+            currentPlayers: this.CurrentPlayers,
+            host: this.getHostName(),
+            maxPlayers: this.MaxPlayers,
+            questions: this.QuestionCount,
+            timePerQuestion: this.TimePerQuestion,
+        };
+    }
+
+    setGameSettings(settings: GameSettings) {
+        this.questions = settings.questions ?? GameImpl.default_questions;
+        this.timeToAnswer = settings.timePerQuestion ?? GameImpl.default_time_to_answer;
+        this.maxPlayers = settings.maxPlayers ?? GameImpl.default_max_players;
+        this.isGamePublic = settings.isGamePublic ?? false;
     }
 
     get Code(): string {
@@ -126,12 +163,41 @@ class GameImpl implements Game {
     get TimePerQuestion() {
         return this.timeToAnswer;
     }
+
+    //#endregion
+
+    getPlayerNames(): string[] {
+        return this.players.map((p) => p.Name);
+    }
+
+    getHostName(): string {
+        const name: string | undefined = this.host?.Name;
+        if (name === undefined) {
+            throw new Error("Host does not have a name");
+        }
+        return name;
+    }
+
+    /**
+     * returns the time ratio at the current point
+     */
+    private getTimeRatio(): number {
+        return this.timer.getTimeLeft() / (this.timeToAnswer * 1000);
+    }
+
+    private handleGameEnd(): void {
+        const topFive = this.players
+            .sort((a, b) => b.Points - a.Points)
+            .slice(0, 5)
+            .map((p) => ({ name: p.Name, points: p.Points }));
+        this.players.forEach((p) => p.signalGameOver(topFive));
+    }
 }
 
 interface Game {
     getNextQuestion(): Question;
 
-    emitQuestionToPlayers(): void;
+    progressToNextRound(): void;
 
     addPlayer(name: string, player: Socket): boolean;
 
