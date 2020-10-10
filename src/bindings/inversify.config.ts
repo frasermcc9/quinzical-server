@@ -2,6 +2,8 @@ import { Console } from "console";
 import { Container, interfaces } from "inversify";
 import { Socket } from "socket.io";
 import LogImpl, { Log } from "../helpers/Log";
+import { Timer, TimerImpl } from "../helpers/Timer";
+import { ActiveQuestionManager, ActiveQuestionManagerImpl } from "../model/ActiveQuestionManager";
 import { Game, GameImpl } from "../model/Game";
 import { GameRegister, GameRegisterImpl } from "../model/GameRegister";
 import { Player, PlayerConstructor, PlayerFactory, PlayerImpl } from "../model/Player";
@@ -17,7 +19,9 @@ mainContainer.bind<QuestionBank>(TYPES.QuestionBank).to(QuestionBankImpl).inSing
 
 mainContainer.bind<IdGenerationContext>(TYPES.IDGeneratorContext).to(IdGeneratorContextImpl);
 
+mainContainer.bind<ActiveQuestionManager>(TYPES.ActiveQuestionManager).to(ActiveQuestionManagerImpl);
 mainContainer.bind<Log>(TYPES.Log).to(LogImpl);
+mainContainer.bind<Timer>(TYPES.Timer).to(TimerImpl);
 
 mainContainer.bind<Console>("console").toConstantValue(console);
 mainContainer.bind<NodeJS.Process>("process").toConstantValue(process);

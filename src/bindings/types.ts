@@ -7,10 +7,13 @@ export const TYPES = {
 
     IDGeneratorContext: Symbol.for("IdGenerationContext"),
 
-    QuestionBank:Symbol.for("QuestionBank")
+    QuestionBank: Symbol.for("QuestionBank"),
+
+    ActiveQuestionManager: Symbol.for("ActiveQuestionManager"),
+    Timer: Symbol.for("Timer"),
 };
 
 export const FACTORIES = {
     GameFactory: Symbol.for("GameFactory"),
     PlayerFactory: Symbol.for("PlayerFactory"),
-}
+};
