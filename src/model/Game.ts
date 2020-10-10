@@ -1,5 +1,5 @@
 import { inject, injectable } from "inversify";
-import { Player, PlayerFactory, PlayerImpl } from "./Player";
+import { Player, PlayerFactory, PlayerImpl, PlayerSummary } from "./Player";
 import { Question } from "./Questions/Question";
 import { Socket } from "socket.io";
 import { TYPES } from "../bindings/types";
@@ -63,7 +63,9 @@ class GameImpl extends EventEmitter implements Game {
     }
 
     progressToRoundEnd(): void {
-        this.players.forEach((player) => player.signalRoundOver(this.questionManager.CorrectAnswer));
+        this.players.forEach((player) =>
+            player.signalRoundOver(this.questionManager.CorrectAnswer, player.Points, this.getTopPlayers())
+        );
         setTimeout(() => {
             this.progressToNextRound();
         }, 3000);
@@ -94,7 +96,7 @@ class GameImpl extends EventEmitter implements Game {
 
         playerObj
             .getSocket()
-            .on("questionAnswered", (answer) => {
+            .on("questionAnswered", (answer: string) => {
                 this.questionManager.answerQuestion(answer, playerObj, this.getTimeRatio());
                 if (this.questionManager.isAllAnswered()) {
                     this.timer.stop();
@@ -110,7 +112,7 @@ class GameImpl extends EventEmitter implements Game {
             this.host
                 .getSocket()
                 .on("startGame", () => this.startGame())
-                .on("kickMember", (memberName) => this.removePlayer(memberName));
+                .on("kickMember", (memberName: string) => this.removePlayer(memberName));
         }
 
         return true;
@@ -198,12 +200,19 @@ class GameImpl extends EventEmitter implements Game {
     }
 
     private handleGameEnd(): void {
-        const topFive = this.players
+        const top = this.getTopPlayers();
+        this.players.forEach((p) => p.signalGameOver(top));
+        this.emit("gameEnd");
+    }
+
+    /**
+     * Gets top players (up to 5), their names and score.
+     */
+    private getTopPlayers(): PlayerSummary[] {
+        return this.players
             .sort((a, b) => b.Points - a.Points)
             .slice(0, Math.min(5, this.players.length))
-            .map((p) => ({ name: p.Name, points: p.Points }));
-        this.players.forEach((p) => p.signalGameOver(topFive));
-        this.emit("gameEnd");
+            .map((p) => ({ Name: p.Name, Points: p.Points }));
     }
 
     private removePlayer(player: Player): void;
