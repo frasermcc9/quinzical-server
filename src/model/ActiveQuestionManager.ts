@@ -17,6 +17,10 @@ class ActiveQuestionManagerImpl implements ActiveQuestionManager {
         });
     }
 
+    removePlayer(player: Player): void {
+        this.playerMap.delete(player);
+    }
+
     setNewQuestion(question: Question): void {
         this.question = question;
         this.playerMap.forEach((_v, k) => {
@@ -69,6 +73,7 @@ interface ActiveQuestionManager {
     setNewQuestion(question: Question): void;
     isAllAnswered(): boolean;
     answerQuestion(solution: string, player: Player, timeRatio: number): void;
+    removePlayer(player: Player): void
 
     CorrectAnswer: string;
 }

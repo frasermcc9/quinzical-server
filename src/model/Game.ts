@@ -74,14 +74,6 @@ class GameImpl extends EventEmitter implements Game {
         this.maxPlayers = this.CurrentPlayers;
         this.players.forEach((player) => {
             player.signalGameStart();
-
-            player.getSocket().on("questionAnswered", (answer) => {
-                this.questionManager.answerQuestion(answer, player, this.getTimeRatio());
-                if (this.questionManager.isAllAnswered()) {
-                    this.timer.stop();
-                    this.progressToRoundEnd();
-                }
-            });
         });
         this.progressToNextRound();
     }
@@ -90,25 +82,43 @@ class GameImpl extends EventEmitter implements Game {
 
     //#region PRE-GAME
 
-    addPlayer(name: string, player: Socket): boolean {
+    addPlayer(name: string, player: Socket, host: boolean = false): boolean {
         if (this.players.length === this.maxPlayers) return false;
         if (this.players.find((p) => p.Name == name) !== undefined) return false;
 
         const playerObj: Player = this.playerFactory(name, player);
         this.players.push(playerObj);
 
-        this.players.forEach((p) => p.getSocket().emit("playerJoin", name));
+        const names = this.players.map((p) => p.Name);
+        this.players.forEach((p) => p.signalPlayerCountChange(names));
+
+        playerObj
+            .getSocket()
+            .on("questionAnswered", (answer) => {
+                this.questionManager.answerQuestion(answer, playerObj, this.getTimeRatio());
+                if (this.questionManager.isAllAnswered()) {
+                    this.timer.stop();
+                    this.progressToRoundEnd();
+                }
+            })
+            .on("disconnect", () => {
+                this.removePlayer(playerObj);
+            });
+
+        if (host) {
+            this.host = playerObj;
+            this.host
+                .getSocket()
+                .on("startGame", () => this.startGame())
+                .on("kickMember", (memberName) => this.removePlayer(memberName));
+        }
 
         return true;
     }
 
     addHostPlayer(name: string, player: Socket): boolean {
-        if (this.isFull()) return false;
+        this.addPlayer(name, player, true);
 
-        const playerObj: Player = this.playerFactory(name, player);
-        this.players.push(playerObj);
-        this.host = playerObj;
-        this.host.getSocket().on("startGame", () => this.startGame());
         return true;
     }
 
@@ -190,10 +200,25 @@ class GameImpl extends EventEmitter implements Game {
     private handleGameEnd(): void {
         const topFive = this.players
             .sort((a, b) => b.Points - a.Points)
-            .slice(0, 5)
+            .slice(0, Math.min(5, this.players.length))
             .map((p) => ({ name: p.Name, points: p.Points }));
         this.players.forEach((p) => p.signalGameOver(topFive));
-        this.emit("gameEnd")
+        this.emit("gameEnd");
+    }
+
+    private removePlayer(player: Player): void;
+    private removePlayer(player: string): void;
+    private removePlayer(player: string | Player): void {
+        if (typeof player == "string") {
+            const playerIntermediate = this.players.find((p) => p.Name == player);
+            if (playerIntermediate === undefined) return;
+            player = playerIntermediate;
+        }
+        this.players.splice(this.players.indexOf(player), 1);
+        this.questionManager.removePlayer(player);
+
+        const names = this.players.map((p) => p.Name);
+        this.players.forEach((p) => p.signalPlayerCountChange(names));
     }
 }
 
