@@ -6,7 +6,7 @@ declare class PlayerImpl implements Player {
     private points;
     constructor(name: string, client: Socket);
     signalGameOver(winners: PlayerSummary[]): void;
-    signalRoundOver(solution: string, playerPoints: number): void;
+    signalRoundOver(solution: string, playerPoints: number, topPlayers: PlayerSummary[]): void;
     signalPlayerCountChange(players: string[]): void;
     signalNewQuestion(question: SendableQuestionData): void;
     signalGameStart(): void;

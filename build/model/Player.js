@@ -10,8 +10,8 @@ class PlayerImpl {
     signalGameOver(winners) {
         this.client.emit("gameFinished", winners);
     }
-    signalRoundOver(solution, playerPoints) {
-        this.client.emit("roundOver", solution, playerPoints);
+    signalRoundOver(solution, playerPoints, topPlayers) {
+        this.client.emit("roundOver", solution, playerPoints, topPlayers);
     }
     signalPlayerCountChange(players) {
         this.client.emit("playersChange", players);
