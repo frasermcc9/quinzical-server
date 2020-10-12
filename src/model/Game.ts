@@ -7,6 +7,8 @@ import { QuestionBank } from "./Questions/QuestionBank";
 import { ActiveQuestionManager } from "./ActiveQuestionManager";
 import { Timer } from "../helpers/Timer";
 import { EventEmitter } from "events";
+import { read } from "fs";
+import LogImpl, { Log } from "../helpers/Log";
 
 @injectable()
 class GameImpl extends EventEmitter implements Game {
@@ -32,7 +34,8 @@ class GameImpl extends EventEmitter implements Game {
         @inject("PlayerFactory") private readonly playerFactory: PlayerFactory,
         @inject(TYPES.QuestionBank) private readonly questionBank: QuestionBank,
         @inject(TYPES.ActiveQuestionManager) private readonly questionManager: ActiveQuestionManager,
-        @inject(TYPES.Timer) private readonly timer: Timer
+        @inject(TYPES.Timer) private readonly timer: Timer,
+        @inject(TYPES.Log) private readonly log: Log
     ) {
         super();
         this.questions = GameImpl.default_questions;
@@ -40,13 +43,26 @@ class GameImpl extends EventEmitter implements Game {
         this.timeToAnswer = GameImpl.default_time_to_answer;
         this.maxPlayers = GameImpl.default_max_players;
         this.isGamePublic = false;
-
-        this.timer.setDelay(this.timeToAnswer * 1000).setFunction(() => this.progressToRoundEnd());
     }
 
     //#endregion
 
     //#region IN GAME
+
+    startGame(): void {
+        //'Close' the game to new players
+        this.maxPlayers = this.CurrentPlayers;
+
+        this.timer.setDelay(this.timeToAnswer * 1000).setFunction(() => this.progressToRoundEnd());
+
+        this.questionManager.addPlayers(this.players);
+
+        this.checkReady();
+
+        this.players.forEach((player) => {
+            player.signalGameStart();
+        });
+    }
 
     getNextQuestion(): Question {
         return this.questionBank.getQuestion();
@@ -56,28 +72,32 @@ class GameImpl extends EventEmitter implements Game {
         if (this.questionsCompleted == this.questions) return this.handleGameEnd();
         this.questionsCompleted++;
 
+        this.players.forEach((player) =>
+            player.getSocket().once("questionAnswered", (answer: string) => {
+                this.questionManager.answerQuestion(answer, player, this.getTimeRatio());
+                if (this.questionManager.isAllAnswered()) {
+                    this.timer.stop();
+                    this.progressToRoundEnd();
+                }
+            })
+        );
+
         const nextQuestion: Question = this.getNextQuestion();
         this.questionManager.setNewQuestion(nextQuestion);
+        this.log.trace("GameImpl", "Sending question.");
 
         this.timer.start();
     }
 
     progressToRoundEnd(): void {
+        this.log.trace("GameImpl", `Round Ended. Waiting 3 seconds before continuing.`);
         this.players.forEach((player) =>
             player.signalRoundOver(this.questionManager.CorrectAnswer, player.Points, this.getTopPlayers())
         );
         setTimeout(() => {
-            this.progressToNextRound();
+            this.players.forEach((p) => p.getSocket().emit("goNextRound"));
+            this.checkReady();
         }, 3000);
-    }
-
-    startGame(): void {
-        //'Close' the game to new players
-        this.maxPlayers = this.CurrentPlayers;
-        this.players.forEach((player) => {
-            player.signalGameStart();
-        });
-        this.progressToNextRound();
     }
 
     //#endregion
@@ -92,26 +112,15 @@ class GameImpl extends EventEmitter implements Game {
         this.players.push(playerObj);
 
         const names = this.players.map((p) => p.Name);
-        this.players.forEach((p) => p.signalPlayerCountChange(names));
+        this.players.forEach((p) => p.signalPlayerCountChange(names, this.maxPlayers));
 
-        playerObj
-            .getSocket()
-            .on("questionAnswered", (answer: string) => {
-                this.questionManager.answerQuestion(answer, playerObj, this.getTimeRatio());
-                if (this.questionManager.isAllAnswered()) {
-                    this.timer.stop();
-                    this.progressToRoundEnd();
-                }
-            })
-            .on("disconnect", () => {
-                this.removePlayer(playerObj);
-            });
+        playerObj.getSocket().once("playerDisconnect", () => this.removePlayer(playerObj));
 
         if (host) {
             this.host = playerObj;
             this.host
                 .getSocket()
-                .on("startGame", () => this.startGame())
+                .once("startGame", () => this.startGame())
                 .on("kickMember", (memberName: string) => this.removePlayer(memberName));
         }
 
@@ -196,10 +205,12 @@ class GameImpl extends EventEmitter implements Game {
      * returns the time ratio at the current point
      */
     private getTimeRatio(): number {
-        return this.timer.getTimeLeft() / (this.timeToAnswer * 1000);
+        const result = this.timer.getTimeLeft() / (this.timeToAnswer * 1000);
+        return result;
     }
 
     private handleGameEnd(): void {
+        this.log.trace("GameImpl", `Game ${this.code} has concluded.`);
         const top = this.getTopPlayers();
         this.players.forEach((p) => p.signalGameOver(top));
         this.emit("gameEnd");
@@ -227,7 +238,24 @@ class GameImpl extends EventEmitter implements Game {
         this.questionManager.removePlayer(player);
 
         const names = this.players.map((p) => p.Name);
-        this.players.forEach((p) => p.signalPlayerCountChange(names));
+        this.players.forEach((p) => p.signalPlayerCountChange(names, this.maxPlayers));
+    }
+
+    private checkReady(): void {
+        const readyMap: Map<Player, boolean> = new Map();
+        this.players.forEach((player) => {
+            readyMap.set(player, false);
+            player.getSocket().once("readyToPlay", () => {
+                readyMap.set(player, true);
+                if (Array.from(readyMap.values()).every((b) => b)) {
+                    this.log.trace(
+                        "GameImpl",
+                        `All players ready. Progressing to next round.`
+                    );
+                    this.progressToNextRound();
+                }
+            });
+        });
     }
 }
 

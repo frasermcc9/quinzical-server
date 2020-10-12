@@ -1,6 +1,6 @@
 import { inject, injectable } from "inversify";
 import { TYPES } from "../bindings/types";
-import { Log } from "../helpers/Log";
+import LogImpl, { Log } from "../helpers/Log";
 import { Player } from "./Player";
 import { Question } from "./Questions/Question";
 
@@ -41,11 +41,11 @@ class ActiveQuestionManagerImpl implements ActiveQuestionManager {
         //answer question
         this.playerMap.set(player, true);
 
-        solution = solution.toLowerCase();
-        const correct: boolean = this.question.Solution.map((s) => s.toLowerCase()).includes(solution);
+        solution = solution.toLowerCase().trim();
+        const correct: boolean = this.question.Solution.map((s) => s.toLowerCase().trim()).includes(solution);
         player.increasePoints(this.calculatePoints(timeRatio, correct));
 
-        player.getSocket().emit("answerResult", correct);
+        player.signalCorrectnessOfAnswer(correct);
     }
 
     get CorrectAnswer(): string {
@@ -64,7 +64,10 @@ class ActiveQuestionManagerImpl implements ActiveQuestionManager {
      * is answered just as time ran out).
      */
     private calculatePoints(timeRatio: number, correct: boolean): number {
-        return ~~(correct ? 0 : timeRatio * 500 + 500);
+        const points = ~~(correct ? timeRatio * 500 + 500 : 0);
+        this.log.trace(this.constructor.name, `Points calculated to be ${points}`);
+
+        return points;
     }
 }
 
@@ -73,7 +76,7 @@ interface ActiveQuestionManager {
     setNewQuestion(question: Question): void;
     isAllAnswered(): boolean;
     answerQuestion(solution: string, player: Player, timeRatio: number): void;
-    removePlayer(player: Player): void
+    removePlayer(player: Player): void;
 
     CorrectAnswer: string;
 }
