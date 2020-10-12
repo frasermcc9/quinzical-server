@@ -22,14 +22,21 @@ class SocketManagerImpl {
         this.ioServer.listen(SocketManagerImpl.PORT);
 
         this.ioServer.on("connection", (client) => {
+
             log.trace("SocketManagerImpl", "Client connected to server");
+
+            client.on("disconnect", () => {
+                log.trace("SocketManagerImpl", "Client disconnected from server.");
+            });
 
             client.on("hostGameRequest", (name: string = "", gameSettings: GameSettings = {}) => {
                 const game = gameRegister.generateGame();
                 game.setGameSettings(gameSettings);
-                game.addHostPlayer(name, client);
 
                 (client as EmittableEvents).emit("gameHostGiven", game.Code);
+                client.on("clientReady", () => {
+                    game.addHostPlayer(name, client);
+                });
 
                 log.trace("SocketManagerImpl", `New Game Initiated by ${name} with code ${game.Code}`);
             });
@@ -47,13 +54,16 @@ class SocketManagerImpl {
                     return log.trace("SocketManagerImpl", `${name} tried to join game with code ${id}.`);
                 }
 
-                const result = game.addPlayer(name, client);
-                if (!result) {
+                if (game.getPlayerNames().includes(name)) {
                     client.emit("joinGameNotification", false, "Someone already has that name.");
+                    return log.trace("SocketManagerImpl", `${name} tried to join game with code ${id}.`);
                 }
 
                 client.emit("joinGameNotification", true, game.getPlayerNames());
-                log.trace("SocketManagerImpl", `${name} joined game joined with code ${id}.`);
+                client.once("clientReady", () => {
+                    game.addPlayer(name, client);
+                    log.trace("SocketManagerImpl", `${name} joined game joined with code ${id}.`);
+                });
             });
 
             client.on("browseGames", () => {
@@ -61,6 +71,7 @@ class SocketManagerImpl {
                 const transmitData = games.map((g) => g.getGameInfo());
                 client.emit("browseGameDataLoaded", transmitData);
             });
+
         });
     }
 
