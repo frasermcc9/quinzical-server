@@ -6,11 +6,13 @@ import { QuestionBank } from "./Questions/QuestionBank";
 import { ActiveQuestionManager } from "./ActiveQuestionManager";
 import { Timer } from "../helpers/Timer";
 import { EventEmitter } from "events";
+import { Log } from "../helpers/Log";
 declare class GameImpl extends EventEmitter implements Game {
     private readonly playerFactory;
     private readonly questionBank;
     private readonly questionManager;
     private readonly timer;
+    private readonly log;
     private players;
     private code;
     private host?;
@@ -23,11 +25,11 @@ declare class GameImpl extends EventEmitter implements Game {
     private static initial_questions_answered;
     private static default_time_to_answer;
     private static default_max_players;
-    constructor(playerFactory: PlayerFactory, questionBank: QuestionBank, questionManager: ActiveQuestionManager, timer: Timer);
+    constructor(playerFactory: PlayerFactory, questionBank: QuestionBank, questionManager: ActiveQuestionManager, timer: Timer, log: Log);
+    startGame(): void;
     getNextQuestion(): Question;
     progressToNextRound(): void;
     progressToRoundEnd(): void;
-    startGame(): void;
     addPlayer(name: string, player: Socket, host?: boolean): boolean;
     addHostPlayer(name: string, player: Socket): boolean;
     isPublic(): boolean;
@@ -52,6 +54,7 @@ declare class GameImpl extends EventEmitter implements Game {
      */
     private getTopPlayers;
     private removePlayer;
+    private checkReady;
 }
 interface Game {
     getNextQuestion(): Question;

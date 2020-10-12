@@ -45,10 +45,10 @@ let ActiveQuestionManagerImpl = class ActiveQuestionManagerImpl {
             this.log.error("ActiveQuestionManager", `Player in game was not found in player map.`);
         //answer question
         this.playerMap.set(player, true);
-        solution = solution.toLowerCase();
-        const correct = this.question.Solution.map((s) => s.toLowerCase()).includes(solution);
+        solution = solution.toLowerCase().trim();
+        const correct = this.question.Solution.map((s) => s.toLowerCase().trim()).includes(solution);
         player.increasePoints(this.calculatePoints(timeRatio, correct));
-        player.getSocket().emit("answerResult", correct);
+        player.signalCorrectnessOfAnswer(correct);
     }
     get CorrectAnswer() {
         if (this.question === undefined)
@@ -66,7 +66,9 @@ let ActiveQuestionManagerImpl = class ActiveQuestionManagerImpl {
      * is answered just as time ran out).
      */
     calculatePoints(timeRatio, correct) {
-        return ~~(correct ? 0 : timeRatio * 500 + 500);
+        const points = ~~(correct ? timeRatio * 500 + 500 : 0);
+        this.log.trace(this.constructor.name, `Points calculated to be ${points}`);
+        return points;
     }
 };
 ActiveQuestionManagerImpl = __decorate([

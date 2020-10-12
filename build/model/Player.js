@@ -13,14 +13,17 @@ class PlayerImpl {
     signalRoundOver(solution, playerPoints, topPlayers) {
         this.client.emit("roundOver", solution, playerPoints, topPlayers);
     }
-    signalPlayerCountChange(players) {
-        this.client.emit("playersChange", players);
+    signalPlayerCountChange(players, max) {
+        this.client.emit("playersChange", players, max);
     }
     signalNewQuestion(question) {
-        this.client.emit("newQuestion", question);
+        this.client.emit("newQuestion", question.question, question.prompt);
     }
     signalGameStart() {
         this.client.emit("gameStart");
+    }
+    signalCorrectnessOfAnswer(correct) {
+        this.client.emit("answerResult", correct);
     }
     get Name() {
         return this.name;

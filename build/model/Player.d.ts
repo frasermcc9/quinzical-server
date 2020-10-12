@@ -7,9 +7,10 @@ declare class PlayerImpl implements Player {
     constructor(name: string, client: Socket);
     signalGameOver(winners: PlayerSummary[]): void;
     signalRoundOver(solution: string, playerPoints: number, topPlayers: PlayerSummary[]): void;
-    signalPlayerCountChange(players: string[]): void;
+    signalPlayerCountChange(players: string[], max: number): void;
     signalNewQuestion(question: SendableQuestionData): void;
     signalGameStart(): void;
+    signalCorrectnessOfAnswer(correct: boolean): void;
     get Name(): string;
     get Points(): number;
     getSocket(): Socket;
@@ -20,12 +21,13 @@ interface PlayerConstructor {
 }
 interface Player extends PlayerSummary {
     signalNewQuestion(question: SendableQuestionData): void;
-    getSocket(): Socket;
-    signalGameStart(): void;
-    increasePoints(pointsToAdd: number): void;
     signalRoundOver(solution: string, playerPoints: number, topPlayers: PlayerSummary[]): void;
     signalGameOver(winners: PlayerSummary[]): void;
-    signalPlayerCountChange(players: string[]): void;
+    signalPlayerCountChange(players: string[], max: number): void;
+    signalCorrectnessOfAnswer(correct: boolean): void;
+    signalGameStart(): void;
+    getSocket(): Socket;
+    increasePoints(pointsToAdd: number): void;
 }
 interface PlayerSummary {
     Name: string;
