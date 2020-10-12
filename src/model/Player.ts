@@ -14,16 +14,20 @@ class PlayerImpl implements Player {
         this.client.emit("roundOver", solution, playerPoints, topPlayers);
     }
 
-    signalPlayerCountChange(players: string[]): void {
-        this.client.emit("playersChange", players);
+    signalPlayerCountChange(players: string[], max: number): void {
+        this.client.emit("playersChange", players, max);
     }
 
     signalNewQuestion(question: SendableQuestionData): void {
-        this.client.emit("newQuestion", question);
+        this.client.emit("newQuestion", question.question, question.prompt);
     }
 
     signalGameStart(): void {
         this.client.emit("gameStart");
+    }
+
+    signalCorrectnessOfAnswer(correct: boolean): void {
+        this.client.emit("answerResult", correct);
     }
 
     get Name(): string {
@@ -50,17 +54,19 @@ interface PlayerConstructor {
 interface Player extends PlayerSummary {
     signalNewQuestion(question: SendableQuestionData): void;
 
-    getSocket(): Socket;
-
-    signalGameStart(): void;
-
-    increasePoints(pointsToAdd: number): void;
-
     signalRoundOver(solution: string, playerPoints: number, topPlayers: PlayerSummary[]): void;
 
     signalGameOver(winners: PlayerSummary[]): void;
 
-    signalPlayerCountChange(players: string[]): void;
+    signalPlayerCountChange(players: string[], max: number): void;
+
+    signalCorrectnessOfAnswer(correct: boolean): void;
+
+    signalGameStart(): void;
+
+    getSocket(): Socket;
+
+    increasePoints(pointsToAdd: number): void;
 }
 
 interface PlayerSummary {
