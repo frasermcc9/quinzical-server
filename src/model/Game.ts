@@ -120,8 +120,12 @@ class GameImpl extends EventEmitter implements Game {
             this.host = playerObj;
             this.host
                 .getSocket()
-                .once("startGame", () => this.startGame())
-                .on("kickMember", (memberName: string) => this.removePlayer(memberName));
+                .once("startGame", () => {
+                    this.startGame();
+                    this.host?.getSocket().removeAllListeners("interrupt");
+                })
+                .on("kickMember", (memberName: string) => this.removePlayer(memberName))
+                .once("quit", () => this.handleHostQuit());
         }
 
         return true;
@@ -201,6 +205,14 @@ class GameImpl extends EventEmitter implements Game {
         return name;
     }
 
+    private handleHostQuit(): void {
+        this.players.forEach((p) => {
+            p.signalGameInterrupt();
+            p.getSocket().emit("playerDisconnect");
+        });
+        this.emit("gameEnd");
+    }
+
     /**
      * returns the time ratio at the current point
      */
@@ -239,6 +251,8 @@ class GameImpl extends EventEmitter implements Game {
 
         const names = this.players.map((p) => p.Name);
         this.players.forEach((p) => p.signalPlayerCountChange(names, this.maxPlayers));
+        player.getSocket().emit("playerDisconnect");
+        player.signalKicked();
     }
 
     private checkReady(): void {
@@ -248,10 +262,7 @@ class GameImpl extends EventEmitter implements Game {
             player.getSocket().once("readyToPlay", () => {
                 readyMap.set(player, true);
                 if (Array.from(readyMap.values()).every((b) => b)) {
-                    this.log.trace(
-                        "GameImpl",
-                        `All players ready. Progressing to next round.`
-                    );
+                    this.log.trace("GameImpl", `All players ready. Progressing to next round.`);
                     this.progressToNextRound();
                 }
             });

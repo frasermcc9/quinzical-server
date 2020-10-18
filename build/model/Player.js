@@ -25,6 +25,12 @@ class PlayerImpl {
     signalCorrectnessOfAnswer(correct) {
         this.client.emit("answerResult", correct);
     }
+    signalGameInterrupt() {
+        this.client.emit("interrupt");
+    }
+    signalKicked() {
+        this.client.emit("kicked");
+    }
     get Name() {
         return this.name;
     }

@@ -30,6 +30,14 @@ class PlayerImpl implements Player {
         this.client.emit("answerResult", correct);
     }
 
+    signalGameInterrupt(): void {
+        this.client.emit("interrupt");
+    }
+
+    signalKicked(): void {
+        this.client.emit("kicked");
+    }
+
     get Name(): string {
         return this.name;
     }
@@ -52,6 +60,8 @@ interface PlayerConstructor {
 }
 
 interface Player extends PlayerSummary {
+    signalKicked(): void;
+
     signalNewQuestion(question: SendableQuestionData): void;
 
     signalRoundOver(solution: string, playerPoints: number, topPlayers: PlayerSummary[]): void;
@@ -63,6 +73,8 @@ interface Player extends PlayerSummary {
     signalCorrectnessOfAnswer(correct: boolean): void;
 
     signalGameStart(): void;
+
+    signalGameInterrupt(): void;
 
     getSocket(): Socket;
 

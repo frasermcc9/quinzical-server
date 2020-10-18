@@ -89,8 +89,12 @@ let GameImpl = GameImpl_1 = class GameImpl extends events_1.EventEmitter {
             this.host = playerObj;
             this.host
                 .getSocket()
-                .once("startGame", () => this.startGame())
-                .on("kickMember", (memberName) => this.removePlayer(memberName));
+                .once("startGame", () => {
+                this.startGame();
+                this.host?.getSocket().removeAllListeners("interrupt");
+            })
+                .on("kickMember", (memberName) => this.removePlayer(memberName))
+                .once("quit", () => this.handleHostQuit());
         }
         return true;
     }
@@ -151,12 +155,18 @@ let GameImpl = GameImpl_1 = class GameImpl extends events_1.EventEmitter {
         }
         return name;
     }
+    handleHostQuit() {
+        this.players.forEach((p) => {
+            p.signalGameInterrupt();
+            p.getSocket().emit("playerDisconnect");
+        });
+        this.emit("gameEnd");
+    }
     /**
      * returns the time ratio at the current point
      */
     getTimeRatio() {
         const result = this.timer.getTimeLeft() / (this.timeToAnswer * 1000);
-        this.log.trace("GameImpl", `Time ratio of ${result} gotten.`);
         return result;
     }
     handleGameEnd() {
@@ -185,6 +195,8 @@ let GameImpl = GameImpl_1 = class GameImpl extends events_1.EventEmitter {
         this.questionManager.removePlayer(player);
         const names = this.players.map((p) => p.Name);
         this.players.forEach((p) => p.signalPlayerCountChange(names, this.maxPlayers));
+        player.getSocket().emit("playerDisconnect");
+        player.signalKicked();
     }
     checkReady() {
         const readyMap = new Map();

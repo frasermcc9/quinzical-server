@@ -44,6 +44,7 @@ declare class GameImpl extends EventEmitter implements Game {
     get TimePerQuestion(): number;
     getPlayerNames(): string[];
     getHostName(): string;
+    private handleHostQuit;
     /**
      * returns the time ratio at the current point
      */
