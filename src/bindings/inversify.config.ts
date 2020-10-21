@@ -8,6 +8,7 @@ import { Game, GameImpl } from "../model/Game";
 import { GameRegister, GameRegisterImpl } from "../model/GameRegister";
 import { Player, PlayerConstructor, PlayerFactory, PlayerImpl } from "../model/Player";
 import { QuestionBank, QuestionBankImpl } from "../model/Questions/QuestionBank";
+import { ExpressManager } from "../server/Express";
 import { SocketManager, SocketManagerImpl } from "../server/Socket";
 import { IdGenerationContext, IdGeneratorContextImpl } from "../util/strategies/IdGenerator";
 import { FACTORIES, TYPES } from "./types";
@@ -25,6 +26,8 @@ mainContainer.bind<Timer>(TYPES.Timer).to(TimerImpl);
 
 mainContainer.bind<Console>("console").toConstantValue(console);
 mainContainer.bind<NodeJS.Process>("process").toConstantValue(process);
+
+mainContainer.bind<ExpressManager>(TYPES.ExpressManager).to(ExpressManager).inSingletonScope();
 
 mainContainer.bind<interfaces.Factory<Game>>(FACTORIES.GameFactory).toFactory<Game>((context: interfaces.Context) => {
     return (type: "GAME") => {
