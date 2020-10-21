@@ -7,7 +7,6 @@ import { QuestionBank } from "./Questions/QuestionBank";
 import { ActiveQuestionManager } from "./ActiveQuestionManager";
 import { Timer } from "../helpers/Timer";
 import { EventEmitter } from "events";
-import { read } from "fs";
 import LogImpl, { Log } from "../helpers/Log";
 
 @injectable()
