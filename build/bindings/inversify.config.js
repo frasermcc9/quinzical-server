@@ -12,6 +12,7 @@ const Game_1 = require("../model/Game");
 const GameRegister_1 = require("../model/GameRegister");
 const Player_1 = require("../model/Player");
 const QuestionBank_1 = require("../model/Questions/QuestionBank");
+const Express_1 = require("../server/Express");
 const Socket_1 = require("../server/Socket");
 const IdGenerator_1 = require("../util/strategies/IdGenerator");
 const types_1 = require("./types");
@@ -26,6 +27,7 @@ mainContainer.bind(types_1.TYPES.Log).to(Log_1.default);
 mainContainer.bind(types_1.TYPES.Timer).to(Timer_1.TimerImpl);
 mainContainer.bind("console").toConstantValue(console);
 mainContainer.bind("process").toConstantValue(process);
+mainContainer.bind(types_1.TYPES.ExpressManager).to(Express_1.ExpressManager).inSingletonScope();
 mainContainer.bind(types_1.FACTORIES.GameFactory).toFactory((context) => {
     return (type) => {
         switch (type) {

@@ -30,69 +30,86 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 var __param = (this && this.__param) || function (paramIndex, decorator) {
     return function (target, key) { decorator(target, key, paramIndex); }
 };
-var SocketManagerImpl_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SocketManagerImpl = void 0;
 const inversify_1 = require("inversify");
 const io = __importStar(require("socket.io"));
-const http_1 = require("http");
 const types_1 = require("../bindings/types");
-let SocketManagerImpl = SocketManagerImpl_1 = class SocketManagerImpl {
-    constructor(log, gameRegister) {
+const Client_Model_1 = require("./database/models/client/Client.Model");
+const http_1 = require("http");
+const socketioAuth = require("socketio-auth");
+let SocketManagerImpl = class SocketManagerImpl {
+    constructor(log, gameRegister, server) {
         this.log = log;
         this.gameRegister = gameRegister;
-        const server = http_1.createServer();
-        this.ioServer = io.default(server);
-        this.ioServer.listen(SocketManagerImpl_1.PORT);
-        this.ioServer.on("connection", (client) => {
-            log.trace("SocketManagerImpl", "Client connected to server");
+        this.server = server;
+        this.postAuthenticate = (client) => {
+            this.log.trace("SocketManagerImpl", `${client.username} authenticated with server`);
+            client.emit("ready");
             client.on("disconnect", () => {
-                log.trace("SocketManagerImpl", "Client disconnected from server.");
+                this.log.trace("SocketManagerImpl", "Client disconnected from server.");
             });
             client.on("hostGameRequest", (name = "", gameSettings = {}) => {
-                const game = gameRegister.generateGame();
+                const game = this.gameRegister.generateGame();
                 game.setGameSettings(gameSettings);
                 client.emit("gameHostGiven", game.Code);
                 client.on("clientReady", () => {
                     game.addHostPlayer(name, client);
                 });
-                log.trace("SocketManagerImpl", `New Game Initiated by ${name} with code ${game.Code}`);
+                this.log.trace("SocketManagerImpl", `New Game Initiated by ${name} with code ${game.Code}`);
             });
             client.on("joinGameRequest", (name, id) => {
-                const game = gameRegister.findGame(id);
+                const game = this.gameRegister.findGame(id);
                 if (game === undefined) {
                     client.emit("joinGameNotification", false, "Game was not found.");
-                    return log.trace("SocketManagerImpl", `${name} tried to join game with code ${id}.`);
+                    return this.log.trace("SocketManagerImpl", `${name} tried to join game with code ${id}.`);
                 }
                 if (game.isFull()) {
                     client.emit("joinGameNotification", false, "Game is full.");
-                    return log.trace("SocketManagerImpl", `${name} tried to join game with code ${id}.`);
+                    return this.log.trace("SocketManagerImpl", `${name} tried to join game with code ${id}.`);
                 }
                 if (game.getPlayerNames().includes(name)) {
                     client.emit("joinGameNotification", false, "Someone already has that name.");
-                    return log.trace("SocketManagerImpl", `${name} tried to join game with code ${id}.`);
+                    return this.log.trace("SocketManagerImpl", `${name} tried to join game with code ${id}.`);
                 }
                 client.emit("joinGameNotification", true, game.getPlayerNames());
                 client.once("clientReady", () => {
                     game.addPlayer(name, client);
-                    log.trace("SocketManagerImpl", `${name} joined game joined with code ${id}.`);
+                    this.log.trace("SocketManagerImpl", `${name} joined game joined with code ${id}.`);
                 });
             });
             client.on("browseGames", () => {
-                const games = gameRegister.getPublicGames();
+                const games = this.gameRegister.getPublicGames();
                 const transmitData = games.map((g) => g.getGameInfo());
                 client.emit("browseGameDataLoaded", transmitData);
             });
+        };
+        this.authenticate = async (client, data, callback) => {
+            const { username, password } = data;
+            const foundUser = await Client_Model_1.ClientModel.findOne({
+                username: { $regex: new RegExp("^" + username.trim() + "$", "i") },
+            });
+            if (!foundUser)
+                return callback(new Error("User Doesn't Exist"));
+            const result = await foundUser.verifyPassword(password);
+            if (result)
+                client.emit("username", foundUser.username);
+            client.username = foundUser.username;
+            return callback(null, result);
+        };
+        this.ioServer = io.default(this.server);
+        socketioAuth(this.ioServer, { authenticate: this.authenticate, postAuthenticate: this.postAuthenticate });
+        this.ioServer.on("connection", (client) => {
+            log.trace("SocketManagerImpl", "Client connected to server");
         });
     }
-    listenToClient() { }
 };
-SocketManagerImpl.PORT = 7373;
-SocketManagerImpl = SocketManagerImpl_1 = __decorate([
+SocketManagerImpl = __decorate([
     inversify_1.injectable(),
     __param(0, inversify_1.inject(types_1.TYPES.Log)),
     __param(1, inversify_1.inject(types_1.TYPES.GameRegister)),
-    __metadata("design:paramtypes", [Object, Object])
+    __param(2, inversify_1.inject(types_1.TYPES.Server)),
+    __metadata("design:paramtypes", [Object, Object, http_1.Server])
 ], SocketManagerImpl);
 exports.SocketManagerImpl = SocketManagerImpl;
 //# sourceMappingURL=Socket.js.map

@@ -9,6 +9,9 @@ exports.TYPES = {
     QuestionBank: Symbol.for("QuestionBank"),
     ActiveQuestionManager: Symbol.for("ActiveQuestionManager"),
     Timer: Symbol.for("Timer"),
+    Server: Symbol.for("Server"),
+    Express: Symbol.for("Express"),
+    ExpressManager: Symbol.for("ExpressManager"),
 };
 exports.FACTORIES = {
     GameFactory: Symbol.for("GameFactory"),

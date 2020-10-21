@@ -6,6 +6,9 @@ export declare const TYPES: {
     QuestionBank: symbol;
     ActiveQuestionManager: symbol;
     Timer: symbol;
+    Server: symbol;
+    Express: symbol;
+    ExpressManager: symbol;
 };
 export declare const FACTORIES: {
     GameFactory: symbol;
