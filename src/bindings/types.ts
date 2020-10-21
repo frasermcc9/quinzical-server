@@ -11,6 +11,10 @@ export const TYPES = {
 
     ActiveQuestionManager: Symbol.for("ActiveQuestionManager"),
     Timer: Symbol.for("Timer"),
+
+    Server: Symbol.for("Server"),
+    Express: Symbol.for("Express"),
+    ExpressManager: Symbol.for("ExpressManager"),
 };
 
 export const FACTORIES = {
