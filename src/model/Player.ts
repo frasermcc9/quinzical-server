@@ -65,7 +65,7 @@ class PlayerImpl implements Player {
     }
 
     playerGameStats(): [correct: number, incorrect: number] {
-        return [this.pointsArray.filter((p) => !p).length, this.pointsArray.filter((p) => p).length];
+        return [this.pointsArray.filter((p) => p).length, this.pointsArray.filter((p) => !p).length];
     }
 }
 

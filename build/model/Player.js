@@ -52,7 +52,7 @@ class PlayerImpl {
         return this.points;
     }
     playerGameStats() {
-        return [this.pointsArray.filter((p) => !p).length, this.pointsArray.filter((p) => p).length];
+        return [this.pointsArray.filter((p) => p).length, this.pointsArray.filter((p) => !p).length];
     }
 }
 exports.PlayerImpl = PlayerImpl;
