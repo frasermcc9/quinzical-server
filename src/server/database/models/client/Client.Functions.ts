@@ -38,11 +38,13 @@ export async function addXp(this: IClientDocument, amount: number): Promise<void
 export async function addCorrect(this: IClientDocument, amount: number): Promise<void> {
     verifyData(this);
     this.stats!.correct = (this.stats?.correct ?? 0) + amount;
+    await this.save();
 }
 
 export async function addIncorrect(this: IClientDocument, amount: number): Promise<void> {
     verifyData(this);
     this.stats!.incorrect = (this.stats?.incorrect ?? 0) + amount;
+    await this.save();
 }
 
 function verifyData(document: IClientDocument) {
