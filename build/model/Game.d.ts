@@ -30,7 +30,7 @@ declare class GameImpl extends EventEmitter implements Game {
     getNextQuestion(): Question;
     progressToNextRound(): void;
     progressToRoundEnd(): void;
-    addPlayer(name: string, player: Socket, host?: boolean): boolean;
+    addPlayer(name: string, player: Socket, host?: boolean): Promise<boolean>;
     addHostPlayer(name: string, player: Socket): boolean;
     isPublic(): boolean;
     isFull(): boolean;
@@ -50,17 +50,19 @@ declare class GameImpl extends EventEmitter implements Game {
      */
     private getTimeRatio;
     private handleGameEnd;
+    private removeEvents;
     /**
      * Gets top players (up to 5), their names and score.
      */
     private getTopPlayers;
+    private distributeRewards;
     private removePlayer;
     private checkReady;
 }
 interface Game {
     getNextQuestion(): Question;
     progressToNextRound(): void;
-    addPlayer(name: string, player: Socket): boolean;
+    addPlayer(name: string, player: Socket): Promise<boolean>;
     addHostPlayer(name: string, player: Socket): boolean;
     setGameSettings(settings: GameSettings): void;
     isPublic(): boolean;
@@ -87,7 +89,7 @@ interface GameSettings {
     questions?: number;
     timePerQuestion?: number;
     maxPlayers?: number;
-    isGamePublic?: boolean;
+    isGamePublic?: string;
 }
 export { Game, GameImpl, GameSettings };
 //# sourceMappingURL=Game.d.ts.map

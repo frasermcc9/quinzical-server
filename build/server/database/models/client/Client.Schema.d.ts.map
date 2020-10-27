@@ -1,1 +1,1 @@
-{"version":3,"file":"Client.Schema.d.ts","sourceRoot":"","sources":["../../../../../src/server/database/models/client/Client.Schema.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,MAAM,EAAE,MAAM,UAAU,CAAC;AAGlC,QAAA,MAAM,YAAY,aAKhB,CAAC;AASH,eAAe,YAAY,CAAC"}
+{"version":3,"file":"Client.Schema.d.ts","sourceRoot":"","sources":["../../../../../src/server/database/models/client/Client.Schema.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,MAAM,EAAE,MAAM,UAAU,CAAC;AAYlC,QAAA,MAAM,YAAY,aAYhB,CAAC;AAeH,eAAe,YAAY,CAAC"}

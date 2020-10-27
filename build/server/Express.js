@@ -31,6 +31,27 @@ let ExpressManager = class ExpressManager {
             console.log(`Test route called`);
             res.status(200).send();
         });
+        this.app.get("/player/:name", async (req, res) => {
+            const name = req.params.name;
+            const player = await Client_Model_1.ClientModel.findPlayer(name);
+            if (player == undefined)
+                return res.status(404).send({ message: "Player wasn't found" });
+            return res.status(200).send({
+                name: player.username,
+                xp: player.getXp(),
+                correct: player.stats?.correct ?? 0,
+                incorrect: player.stats?.incorrect ?? 0,
+            });
+        });
+        this.app.get("/leaders", async (req, res) => {
+            const players = await Client_Model_1.ClientModel.find().sort({ "stats.XP": -1 }).limit(50);
+            return res.status(200).send(players.map((m) => ({
+                correct: m.stats?.correct ?? 0,
+                incorrect: m.stats?.incorrect ?? 0,
+                XP: m.stats?.XP ?? 0,
+                name: m.username,
+            })));
+        });
         this.app.post("/register", urlEncodedParser, async (req, res) => {
             if (req.body === undefined)
                 return;

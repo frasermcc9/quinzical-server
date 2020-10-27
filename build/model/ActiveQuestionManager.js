@@ -47,8 +47,9 @@ let ActiveQuestionManagerImpl = class ActiveQuestionManagerImpl {
         this.playerMap.set(player, true);
         solution = solution.toLowerCase().trim();
         const correct = this.question.Solution.map((s) => s.toLowerCase().trim()).includes(solution);
-        player.increasePoints(this.calculatePoints(timeRatio, correct));
-        player.signalCorrectnessOfAnswer(correct);
+        const points = this.calculatePoints(timeRatio, correct);
+        player.increasePoints(points);
+        player.signalCorrectnessOfAnswer(correct, points);
     }
     get CorrectAnswer() {
         if (this.question === undefined)

@@ -6,24 +6,29 @@ class PlayerImpl {
         this.name = name;
         this.client = client;
         this.points = 0;
+        this.mostRecentPoints = 0;
+        this.pointsArray = [];
     }
-    signalGameOver(winners) {
-        this.client.emit("gameFinished", winners);
+    signalGameOver(winners, yourPoints) {
+        this.client.emit("gameFinished", winners, yourPoints);
     }
     signalRoundOver(solution, playerPoints, topPlayers) {
-        this.client.emit("roundOver", solution, playerPoints, topPlayers);
+        this.client.emit("roundOver", solution, playerPoints, topPlayers, this.mostRecentPoints);
+        this.mostRecentPoints = 0;
     }
-    signalPlayerCountChange(players, max) {
-        this.client.emit("playersChange", players, max);
+    signalPlayerCountChange(players, xp, max) {
+        this.client.emit("playersChange", players, xp, max);
     }
     signalNewQuestion(question) {
         this.client.emit("newQuestion", question.question, question.prompt);
     }
-    signalGameStart() {
-        this.client.emit("gameStart");
+    signalGameStart(timer) {
+        this.client.emit("gameStart", timer);
     }
-    signalCorrectnessOfAnswer(correct) {
+    signalCorrectnessOfAnswer(correct, points) {
         this.client.emit("answerResult", correct);
+        this.mostRecentPoints = points;
+        this.pointsArray.push(points);
     }
     signalGameInterrupt() {
         this.client.emit("interrupt");
@@ -31,17 +36,23 @@ class PlayerImpl {
     signalKicked() {
         this.client.emit("kicked");
     }
+    getSocket() {
+        return this.client;
+    }
+    increasePoints(pointsToAdd) {
+        this.points += pointsToAdd;
+    }
+    setMostRecentPoints(n) {
+        this.mostRecentPoints = n;
+    }
     get Name() {
         return this.name;
     }
     get Points() {
         return this.points;
     }
-    getSocket() {
-        return this.client;
-    }
-    increasePoints(pointsToAdd) {
-        this.points += pointsToAdd;
+    playerGameStats() {
+        return [this.pointsArray.filter((p) => !p).length, this.pointsArray.filter((p) => p).length];
     }
 }
 exports.PlayerImpl = PlayerImpl;

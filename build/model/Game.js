@@ -17,6 +17,7 @@ exports.GameImpl = void 0;
 const inversify_1 = require("inversify");
 const types_1 = require("../bindings/types");
 const events_1 = require("events");
+const Client_Model_1 = require("../server/database/models/client/Client.Model");
 let GameImpl = GameImpl_1 = class GameImpl extends events_1.EventEmitter {
     constructor(playerFactory, questionBank, questionManager, timer, log) {
         super();
@@ -43,7 +44,7 @@ let GameImpl = GameImpl_1 = class GameImpl extends events_1.EventEmitter {
         this.questionManager.addPlayers(this.players);
         this.checkReady();
         this.players.forEach((player) => {
-            player.signalGameStart();
+            player.signalGameStart(this.timeToAnswer);
         });
     }
     getNextQuestion() {
@@ -66,16 +67,16 @@ let GameImpl = GameImpl_1 = class GameImpl extends events_1.EventEmitter {
         this.timer.start();
     }
     progressToRoundEnd() {
-        this.log.trace("GameImpl", `Round Ended. Waiting 3 seconds before continuing.`);
+        this.log.trace("GameImpl", `Round Ended. Waiting 5 seconds before continuing.`);
         this.players.forEach((player) => player.signalRoundOver(this.questionManager.CorrectAnswer, player.Points, this.getTopPlayers()));
         setTimeout(() => {
             this.players.forEach((p) => p.getSocket().emit("goNextRound"));
             this.checkReady();
-        }, 3000);
+        }, 4000);
     }
     //#endregion
     //#region PRE-GAME
-    addPlayer(name, player, host = false) {
+    async addPlayer(name, player, host = false) {
         if (this.players.length === this.maxPlayers)
             return false;
         if (this.players.find((p) => p.Name == name) !== undefined)
@@ -83,7 +84,9 @@ let GameImpl = GameImpl_1 = class GameImpl extends events_1.EventEmitter {
         const playerObj = this.playerFactory(name, player);
         this.players.push(playerObj);
         const names = this.players.map((p) => p.Name);
-        this.players.forEach((p) => p.signalPlayerCountChange(names, this.maxPlayers));
+        const dbUsers = await Promise.all(this.players.map((p) => Client_Model_1.ClientModel.findOne({ username: { $regex: new RegExp("^" + p.Name.trim() + "$", "i") } })));
+        const xpList = dbUsers.map((p) => p?.getXp() ?? 0);
+        this.players.forEach((p) => p.signalPlayerCountChange(names, xpList, this.maxPlayers));
         playerObj.getSocket().once("playerDisconnect", () => this.removePlayer(playerObj));
         if (host) {
             this.host = playerObj;
@@ -124,7 +127,7 @@ let GameImpl = GameImpl_1 = class GameImpl extends events_1.EventEmitter {
         this.questions = settings.questions ?? GameImpl_1.default_questions;
         this.timeToAnswer = settings.timePerQuestion ?? GameImpl_1.default_time_to_answer;
         this.maxPlayers = settings.maxPlayers ?? GameImpl_1.default_max_players;
-        this.isGamePublic = settings.isGamePublic ?? false;
+        this.isGamePublic = settings.isGamePublic == "true";
     }
     get Code() {
         return this.code;
@@ -160,6 +163,7 @@ let GameImpl = GameImpl_1 = class GameImpl extends events_1.EventEmitter {
             p.signalGameInterrupt();
             p.getSocket().emit("playerDisconnect");
         });
+        this.removeEvents();
         this.emit("gameEnd");
     }
     /**
@@ -171,9 +175,20 @@ let GameImpl = GameImpl_1 = class GameImpl extends events_1.EventEmitter {
     }
     handleGameEnd() {
         this.log.trace("GameImpl", `Game ${this.code} has concluded.`);
+        this.distributeRewards();
         const top = this.getTopPlayers();
-        this.players.forEach((p) => p.signalGameOver(top));
+        this.players.forEach((p) => p.signalGameOver(top, p.Points));
         this.emit("gameEnd");
+        this.removeEvents();
+    }
+    removeEvents() {
+        this.players.forEach((p) => {
+            p.getSocket()
+                .removeAllListeners("kickMember")
+                .removeAllListeners("quit")
+                .removeAllListeners("playerDisconnect")
+                .removeAllListeners("startGame");
+        });
     }
     /**
      * Gets top players (up to 5), their names and score.
@@ -181,10 +196,22 @@ let GameImpl = GameImpl_1 = class GameImpl extends events_1.EventEmitter {
     getTopPlayers() {
         return this.players
             .sort((a, b) => b.Points - a.Points)
-            .slice(0, Math.min(5, this.players.length))
+            .slice(0, Math.min(9, this.players.length))
             .map((p) => ({ Name: p.Name, Points: p.Points }));
     }
-    removePlayer(player) {
+    async distributeRewards() {
+        for (let i = 0; i < this.players.length; i++) {
+            const player = this.players[i];
+            const user = await Client_Model_1.ClientModel.findOne({
+                username: { $regex: new RegExp("^" + player.Name.trim() + "$", "i") },
+            });
+            await user?.addXp(player.Points);
+            const data = player.playerGameStats();
+            await user?.addCorrect(data[0]);
+            await user?.addIncorrect(data[1]);
+        }
+    }
+    async removePlayer(player) {
         if (typeof player == "string") {
             const playerIntermediate = this.players.find((p) => p.Name == player);
             if (playerIntermediate === undefined)
@@ -194,7 +221,9 @@ let GameImpl = GameImpl_1 = class GameImpl extends events_1.EventEmitter {
         this.players.splice(this.players.indexOf(player), 1);
         this.questionManager.removePlayer(player);
         const names = this.players.map((p) => p.Name);
-        this.players.forEach((p) => p.signalPlayerCountChange(names, this.maxPlayers));
+        const dbUsers = await Promise.all(this.players.map((p) => Client_Model_1.ClientModel.findOne({ username: { $regex: new RegExp("^" + p.Name.trim() + "$", "i") } })));
+        const xpList = dbUsers.map((p) => p?.getXp() ?? 0);
+        this.players.forEach((p) => p.signalPlayerCountChange(names, xpList, this.maxPlayers));
         player.getSocket().emit("playerDisconnect");
         player.signalKicked();
     }

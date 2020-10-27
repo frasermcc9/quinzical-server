@@ -4,19 +4,23 @@ declare class PlayerImpl implements Player {
     private readonly name;
     private readonly client;
     private points;
+    private mostRecentPoints;
+    private pointsArray;
     constructor(name: string, client: Socket);
-    signalGameOver(winners: PlayerSummary[]): void;
+    signalGameOver(winners: PlayerSummary[], yourPoints: number): void;
     signalRoundOver(solution: string, playerPoints: number, topPlayers: PlayerSummary[]): void;
-    signalPlayerCountChange(players: string[], max: number): void;
+    signalPlayerCountChange(players: string[], xp: number[], max: number): void;
     signalNewQuestion(question: SendableQuestionData): void;
-    signalGameStart(): void;
-    signalCorrectnessOfAnswer(correct: boolean): void;
+    signalGameStart(timer: number): void;
+    signalCorrectnessOfAnswer(correct: boolean, points: number): void;
     signalGameInterrupt(): void;
     signalKicked(): void;
-    get Name(): string;
-    get Points(): number;
     getSocket(): Socket;
     increasePoints(pointsToAdd: number): void;
+    setMostRecentPoints(n: number): void;
+    get Name(): string;
+    get Points(): number;
+    playerGameStats(): [correct: number, incorrect: number];
 }
 interface PlayerConstructor {
     new (name: string, client: Socket): PlayerImpl;
@@ -25,13 +29,15 @@ interface Player extends PlayerSummary {
     signalKicked(): void;
     signalNewQuestion(question: SendableQuestionData): void;
     signalRoundOver(solution: string, playerPoints: number, topPlayers: PlayerSummary[]): void;
-    signalGameOver(winners: PlayerSummary[]): void;
-    signalPlayerCountChange(players: string[], max: number): void;
-    signalCorrectnessOfAnswer(correct: boolean): void;
-    signalGameStart(): void;
+    signalGameOver(winners: PlayerSummary[], yourPoints: number): void;
+    signalPlayerCountChange(players: string[], xp: number[], max: number): void;
+    signalCorrectnessOfAnswer(correct: boolean, points: number): void;
+    signalGameStart(timer: number): void;
     signalGameInterrupt(): void;
     getSocket(): Socket;
     increasePoints(pointsToAdd: number): void;
+    setMostRecentPoints(n: number): void;
+    playerGameStats(): [correct: number, incorrect: number];
 }
 interface PlayerSummary {
     Name: string;
