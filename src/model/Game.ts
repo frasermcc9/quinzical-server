@@ -8,6 +8,7 @@ import { ActiveQuestionManager } from "./ActiveQuestionManager";
 import { Timer } from "../helpers/Timer";
 import { EventEmitter } from "events";
 import LogImpl, { Log } from "../helpers/Log";
+import { ClientModel } from "../server/database/models/client/Client.Model";
 
 @injectable()
 class GameImpl extends EventEmitter implements Game {
@@ -59,7 +60,7 @@ class GameImpl extends EventEmitter implements Game {
         this.checkReady();
 
         this.players.forEach((player) => {
-            player.signalGameStart();
+            player.signalGameStart(this.timeToAnswer);
         });
     }
 
@@ -89,21 +90,21 @@ class GameImpl extends EventEmitter implements Game {
     }
 
     progressToRoundEnd(): void {
-        this.log.trace("GameImpl", `Round Ended. Waiting 3 seconds before continuing.`);
+        this.log.trace("GameImpl", `Round Ended. Waiting 5 seconds before continuing.`);
         this.players.forEach((player) =>
             player.signalRoundOver(this.questionManager.CorrectAnswer, player.Points, this.getTopPlayers())
         );
         setTimeout(() => {
             this.players.forEach((p) => p.getSocket().emit("goNextRound"));
             this.checkReady();
-        }, 3000);
+        }, 4000);
     }
 
     //#endregion
 
     //#region PRE-GAME
 
-    addPlayer(name: string, player: Socket, host: boolean = false): boolean {
+    async addPlayer(name: string, player: Socket, host: boolean = false): Promise<boolean> {
         if (this.players.length === this.maxPlayers) return false;
         if (this.players.find((p) => p.Name == name) !== undefined) return false;
 
@@ -111,7 +112,13 @@ class GameImpl extends EventEmitter implements Game {
         this.players.push(playerObj);
 
         const names = this.players.map((p) => p.Name);
-        this.players.forEach((p) => p.signalPlayerCountChange(names, this.maxPlayers));
+        const dbUsers = await Promise.all(
+            this.players.map((p) =>
+                ClientModel.findOne({ username: { $regex: new RegExp("^" + p.Name.trim() + "$", "i") } })
+            )
+        );
+        const xpList = dbUsers.map((p) => p?.getXp() ?? 0);
+        this.players.forEach((p) => p.signalPlayerCountChange(names, xpList, this.maxPlayers));
 
         playerObj.getSocket().once("playerDisconnect", () => this.removePlayer(playerObj));
 
@@ -163,7 +170,7 @@ class GameImpl extends EventEmitter implements Game {
         this.questions = settings.questions ?? GameImpl.default_questions;
         this.timeToAnswer = settings.timePerQuestion ?? GameImpl.default_time_to_answer;
         this.maxPlayers = settings.maxPlayers ?? GameImpl.default_max_players;
-        this.isGamePublic = settings.isGamePublic ?? false;
+        this.isGamePublic = settings.isGamePublic == "true";
     }
 
     get Code(): string {
@@ -209,6 +216,7 @@ class GameImpl extends EventEmitter implements Game {
             p.signalGameInterrupt();
             p.getSocket().emit("playerDisconnect");
         });
+        this.removeEvents();
         this.emit("gameEnd");
     }
 
@@ -222,9 +230,22 @@ class GameImpl extends EventEmitter implements Game {
 
     private handleGameEnd(): void {
         this.log.trace("GameImpl", `Game ${this.code} has concluded.`);
+
+        this.distributeRewards();
         const top = this.getTopPlayers();
-        this.players.forEach((p) => p.signalGameOver(top));
+        this.players.forEach((p) => p.signalGameOver(top, p.Points));
         this.emit("gameEnd");
+        this.removeEvents();
+    }
+
+    private removeEvents(): void {
+        this.players.forEach((p) => {
+            p.getSocket()
+                .removeAllListeners("kickMember")
+                .removeAllListeners("quit")
+                .removeAllListeners("playerDisconnect")
+                .removeAllListeners("startGame");
+        });
     }
 
     /**
@@ -233,13 +254,26 @@ class GameImpl extends EventEmitter implements Game {
     private getTopPlayers(): PlayerSummary[] {
         return this.players
             .sort((a, b) => b.Points - a.Points)
-            .slice(0, Math.min(5, this.players.length))
+            .slice(0, Math.min(9, this.players.length))
             .map((p) => ({ Name: p.Name, Points: p.Points }));
+    }
+
+    private async distributeRewards(): Promise<void> {
+        for (let i = 0; i < this.players.length; i++) {
+            const player = this.players[i];
+            const user = await ClientModel.findOne({
+                username: { $regex: new RegExp("^" + player.Name.trim() + "$", "i") },
+            });
+            await user?.addXp(player.Points);
+            const data = player.playerGameStats();
+            await user?.addCorrect(data[0]);
+            await user?.addIncorrect(data[1]);
+        }
     }
 
     private removePlayer(player: Player): void;
     private removePlayer(player: string): void;
-    private removePlayer(player: string | Player): void {
+    private async removePlayer(player: string | Player): Promise<void> {
         if (typeof player == "string") {
             const playerIntermediate = this.players.find((p) => p.Name == player);
             if (playerIntermediate === undefined) return;
@@ -249,7 +283,13 @@ class GameImpl extends EventEmitter implements Game {
         this.questionManager.removePlayer(player);
 
         const names = this.players.map((p) => p.Name);
-        this.players.forEach((p) => p.signalPlayerCountChange(names, this.maxPlayers));
+        const dbUsers = await Promise.all(
+            this.players.map((p) =>
+                ClientModel.findOne({ username: { $regex: new RegExp("^" + p.Name.trim() + "$", "i") } })
+            )
+        );
+        const xpList = dbUsers.map((p) => p?.getXp() ?? 0);
+        this.players.forEach((p) => p.signalPlayerCountChange(names, xpList, this.maxPlayers));
         player.getSocket().emit("playerDisconnect");
         player.signalKicked();
     }
@@ -274,7 +314,7 @@ interface Game {
 
     progressToNextRound(): void;
 
-    addPlayer(name: string, player: Socket): boolean;
+    addPlayer(name: string, player: Socket): Promise<boolean>;
 
     addHostPlayer(name: string, player: Socket): boolean;
 
@@ -316,7 +356,7 @@ interface GameSettings {
     questions?: number;
     timePerQuestion?: number;
     maxPlayers?: number;
-    isGamePublic?: boolean;
+    isGamePublic?: string;
 }
 
 export { Game, GameImpl, GameSettings };
