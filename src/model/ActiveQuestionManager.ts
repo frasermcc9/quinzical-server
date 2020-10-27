@@ -43,9 +43,10 @@ class ActiveQuestionManagerImpl implements ActiveQuestionManager {
 
         solution = solution.toLowerCase().trim();
         const correct: boolean = this.question.Solution.map((s) => s.toLowerCase().trim()).includes(solution);
-        player.increasePoints(this.calculatePoints(timeRatio, correct));
+        const points = this.calculatePoints(timeRatio, correct);
+        player.increasePoints(points);
 
-        player.signalCorrectnessOfAnswer(correct);
+        player.signalCorrectnessOfAnswer(correct, points);
     }
 
     get CorrectAnswer(): string {
