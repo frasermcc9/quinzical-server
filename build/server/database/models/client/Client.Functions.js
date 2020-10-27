@@ -35,11 +35,13 @@ exports.addXp = addXp;
 async function addCorrect(amount) {
     verifyData(this);
     this.stats.correct = (this.stats?.correct ?? 0) + amount;
+    await this.save();
 }
 exports.addCorrect = addCorrect;
 async function addIncorrect(amount) {
     verifyData(this);
     this.stats.incorrect = (this.stats?.incorrect ?? 0) + amount;
+    await this.save();
 }
 exports.addIncorrect = addIncorrect;
 function verifyData(document) {

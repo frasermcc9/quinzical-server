@@ -50,6 +50,11 @@
         }
     ],
     "Symbols": [{
+            "question": "These are the colours on the New Zealand Flag",
+            "prompt": "what are",
+            "solution": ["Blue, Red, White"]
+        },
+        {
             "question": "This is the number of stars on the New Zealand flag",
             "prompt": "what is",
             "solution": ["4", "four"]
